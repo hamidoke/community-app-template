@@ -86,6 +86,9 @@
                     scope.disabled = false;
                     scope.fixedDetails = angular.copy(scope.formData);
                     scope.fixedDetails.productName = scope.formValue(scope.products,scope.formData.productId,'id','name');
+                    scope.allowManuallyEnterInterestRate = scope.formValue(scope.products,scope.formData.productId,'id','allowManuallyEnterInterestRate');
+                    console.log(scope.allowManuallyEnterInterestRate);
+
                     scope.chart = data.accountChart;
                     scope.chartSlabs = scope.chart.chartSlabs;
                     //format chart date values
@@ -122,6 +125,84 @@
                     scope.formData.transferInterestToSavings = 'false';
                 });
             };
+
+
+            scope.isUserDefinedInterestRate = false;
+            scope.setInterestRate = function() {
+            		scope.isUserDefinedInterestRate = true;
+            };
+            scope.calculateInterestRate = function() {
+            console.log(scope.chartSlabs, scope.isUserDefinedInterestRate, scope.formData.depositAmount, scope.formData.depositPeriod,
+            scope.formData.depositPeriodFrequencyId);
+				if (!scope.isUserDefinedInterestRate &&
+					(scope.formData.depositAmount && scope.formData.depositPeriod && scope.formData.depositPeriodFrequencyId > -1)) {
+					var amount = parseFloat(scope.formData.depositAmount);
+					var depositPeriod = parseFloat(scope.formData.depositPeriod);
+					var periodFrequency = scope.formData.depositPeriodFrequencyId;
+					var filteredSlabs = scope.chartSlabs.filter(function (x) { return amount >= x.amountRangeFrom &&  (amount <= x.amountRangeTo || !x.amountRangeTo) });
+					filteredSlabs.map(function(x) {
+
+						var period = scope.computePeriod(depositPeriod, periodFrequency, x.periodType.id);
+						console.log("x", period);
+						if(x.toPeriod && x.fromPeriod){
+						    if (period && x.fromPeriod <= period && x.toPeriod >= period) {
+                        		 scope.formData.nominalAnnualInterestRate = x.annualInterestRate;
+						}}else
+						if (period && x.fromPeriod <= period){
+                                 scope.formData.nominalAnnualInterestRate = x.annualInterestRate;
+						}
+
+					});
+				}
+			};
+
+			scope.computePeriod = function(depositPeriod, depositPeriodFrequency, filteredPeriod) {
+				if (depositPeriodFrequency == filteredPeriod) {
+					return depositPeriod;
+				}
+				if (filteredPeriod == 0) {
+					if (depositPeriodFrequency == 1) {
+						return depositPeriod * 7;
+					}
+					if (depositPeriodFrequency == 2) {
+						return depositPeriod * 30;
+					}
+					if (depositPeriodFrequency == 3) {
+						return depositPeriod * 365;
+					}
+				} else if (filteredPeriod == 1) {
+					if (depositPeriodFrequency == 0) {
+						return depositPeriod / 7;
+					}
+					if (depositPeriodFrequency == 2) {
+						return depositPeriod * 4;
+					}
+					if (depositPeriodFrequency == 3) {
+						return depositPeriod * 52;
+					}
+				} else if (filteredPeriod == 2) {
+					if (depositPeriodFrequency == 0) {
+						return depositPeriod / 30;
+					}
+					if (depositPeriodFrequency == 1) {
+						return depositPeriod / 4;
+					}
+					if (depositPeriodFrequency == 3) {
+						return depositPeriod * 12;
+					}
+				} else if (filteredPeriod == 3) {
+					if (depositPeriodFrequency == 0) {
+						return depositPeriod / 365;
+					}
+					if (depositPeriodFrequency == 1) {
+						return depositPeriod / 52;
+					}
+					if (depositPeriodFrequency == 2) {
+						return depositPeriod / 12;
+					}
+				}
+			};
+
 
             scope.$watch('formData',function(newVal){
                scope.fixedDetails = angular.extend(scope.fixedDetails,newVal);
